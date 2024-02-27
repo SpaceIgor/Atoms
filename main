@@ -30,7 +30,7 @@ def calculate_acceleration_components(q1, q2, x1, y1, x2, y2, m):
     return ax, ay
 
 
-# Initial positions of H1, O, H2 in meters
+# Initial positions of O1, C, O2 in meters
 positions = np.array([[-4.0, 0], [0, 2.0], [4.0, 0]], dtype=np.float64) * 1e-10
 x, y = positions[:, 0], positions[:, 1]
 
