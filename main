@@ -1,0 +1,123 @@
+import numpy as np
+from scipy.constants import elementary_charge, pi, Boltzmann
+np.set_printoptions(precision=2)
+
+# Constants
+ke = 1 / (4 * pi * 8.8541878128e-12)  # Coulomb's constant (N m^2/C^2)
+m_C = 2.3214e-26  # Mass of carbon atom (kg)
+m_O = 2.656e-26  # Mass of oxygen atom (kg)
+k_B = 1.380649e-23  # Boltzmann constant (J/K)
+temperature = 17 + 273.15  # Temperature in Kelvin
+
+
+# Function to calculate distance between two points
+def distance(x1, y1, x2, y2):
+    return np.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2)
+
+
+def average_velocity(m, T):
+    return np.sqrt((8 * Boltzmann * T) / (pi * m))
+
+
+# Function to calculate acceleration components
+def calculate_acceleration_components(q1, q2, x1, y1, x2, y2, m):
+    dx = x2 - x1
+    dy = y2 - y1
+    r = np.sqrt(dx ** 2 + dy ** 2)
+    force = ke * (q1 * q2) / (r ** 2)
+    ax = force * dx / r / m
+    ay = force * dy / r / m
+    return ax, ay
+
+
+# Initial positions of H1, O, H2 in meters
+positions = np.array([[-4.0, 0], [0, 2.0], [4.0, 0]], dtype=np.float64) * 1e-10
+x, y = positions[:, 0], positions[:, 1]
+
+# Default charges
+q_O = -elementary_charge  # Partial negative charge of oxygen
+q_C = elementary_charge  # Partial positive charge of carbon
+
+# Calculate acceleration components for each interaction
+ax_O1_C, ay_O1_C = calculate_acceleration_components(q_C, q_O, x[0], y[0], x[1], y[1], m_O)
+ax_C_O2, ay_C_O2 = calculate_acceleration_components(q_O, q_C, x[1], y[1], x[2], y[2], m_C)
+ax_O2_C, ay_O2_C = calculate_acceleration_components(q_C, q_O, x[2], y[2], x[1], y[1], m_O)
+
+# Time interval
+t = 1e-14  # 10^-14 seconds
+t = np.float64(t)
+
+
+# Function to update position and velocity
+def update_position_and_velocity(x, y, vx, vy, ax, ay, t):
+    # Update position
+    x_new = x + vx * t + 0.5 * ax * t ** 2
+    y_new = y + vy * t + 0.5 * ay * t ** 2
+    # Update velocity
+    vx_new = vx + ax * t
+    vy_new = vy + ay * t
+    return x_new, y_new, vx_new, vy_new
+
+
+# Update positions and velocities for each atom
+new_shape = (2, positions.shape[0], positions.shape[1])
+positions_new = np.zeros(shape=new_shape, dtype=np.longdouble)
+velocities_new = np.zeros(shape=new_shape, dtype=np.longdouble)
+atom_names = ["Left Oxygen Atom (O1):", "Carbon Atom (C):", "Right Oxygen Atom (O2):"]
+
+v_avg_O = average_velocity(m_O, temperature)
+v_avg_C = average_velocity(m_C, temperature)
+
+initial_vx_C = v_avg_O
+initial_vy_C = 0
+
+initial_vx_O1 = 0
+initial_vy_O1 = -v_avg_C
+
+initial_vx_O2 = 0
+initial_vy_O2 = v_avg_C
+
+# Update for O1 due to C for timestep 1
+x_new, y_new, vx_new, vy_new = update_position_and_velocity(
+    x[0], y[0], initial_vx_O1, initial_vy_O1, ax_O1_C, ay_O1_C, t)
+positions_new[0][0] = [x_new, y_new]
+velocities_new[0][0] = [vx_new, vy_new]
+
+# Update for O1 due to C for timestep 2
+x_new, y_new, vx_new, vy_new = update_position_and_velocity(
+    x_new, y_new, vx_new, vy_new, ax_O1_C, ay_O1_C, t)
+positions_new[1][0] = [x_new, y_new]
+velocities_new[1][0] = [vx_new, vy_new]
+
+# Update for C due to O1 and O2 for timestep 1
+x_new, y_new, vx_new, vy_new = update_position_and_velocity(
+    x[1], y[1], initial_vx_C, initial_vy_C, ax_O1_C + ax_C_O2, ay_O1_C + ay_C_O2, t)
+positions_new[0][1] = [x_new, y_new]
+velocities_new[0][1] = [vx_new, vy_new]
+
+# Update for C due to O1 and O2 for timestep 2
+x_new, y_new, vx_new, vy_new = update_position_and_velocity(
+    x_new, y_new, vx_new, vy_new, ax_O1_C + ax_C_O2, ay_O1_C + ay_C_O2, t)
+positions_new[1][1] = [x_new, y_new]
+velocities_new[1][1] = [vx_new, vy_new]
+
+# Update for O2 due to C for timestep 1
+x_new, y_new, vx_new, vy_new = update_position_and_velocity(
+    x[2], y[2], initial_vx_O2, initial_vy_O2, ax_O2_C, ay_O2_C, t)
+positions_new[0][2] = [x_new, y_new]
+velocities_new[0][2] = [vx_new, vy_new]
+
+
+# Update for )2 due to C for timestep 2
+x_new, y_new, vx_new, vy_new = update_position_and_velocity(
+    x_new, y_new, vx_new, vy_new, ax_O2_C, ay_O2_C, t)
+positions_new[1][2] = [x_new, y_new]
+velocities_new[1][2] = [vx_new, vy_new]
+
+
+for i, atom_name in enumerate(atom_names):
+    print(atom_name)
+    for timestep in [0, 1]:
+        print(f"Timestep: {timestep+1}")
+        print("Position (x, y):", positions_new[timestep][i])
+        print("Velocity (vx, vy):", velocities_new[timestep][i])
