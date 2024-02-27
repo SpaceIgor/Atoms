@@ -36,7 +36,7 @@ x, y = positions[:, 0], positions[:, 1]
 
 # Default charges
 q_O = -elementary_charge  # Partial negative charge of oxygen
-q_C = elementary_charge  # Partial positive charge of carbon
+q_C = 4 * elementary_charge  # Partial positive charge of carbon
 
 # Calculate acceleration components for each interaction
 ax_O1_C, ay_O1_C = calculate_acceleration_components(q_C, q_O, x[0], y[0], x[1], y[1], m_O)
